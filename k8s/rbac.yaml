@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sentinelmcp-sa
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sentinelmcp-role
+  namespace: default
+rules:
+  # Pod inspection & log fetching
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "events"]
+    verbs: ["get", "list", "watch"]
+  # Deployment diagnostic & guarded remediation
+  - apiGroups: ["apps"]
+    resources: ["deployments", "deployments/scale"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  # ConfigMap reading for circuit breaker checks
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sentinelmcp-rolebinding
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: sentinelmcp-sa
+    namespace: default
+roleRef:
+  kind: Role
+  name: sentinelmcp-role
+  apiGroup: rbac.authorization.k8s.io
