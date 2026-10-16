@@ -10,7 +10,7 @@ Anthropic's **Model Context Protocol (MCP)** provides an open, standardized JSON
 
 ## Decision
 We decouple SentinelMCP's diagnostic and remediation capabilities into a standalone **Model Context Protocol (MCP) Server**.
-1. All SRE capabilities (`query_signoz_telemetry`, `diagnose_k8s_pods`, `fetch_container_logs`, `execute_remediation_runbook`, `generate_postmortem_rca`) are authored as pure MCP tool endpoints with strict JSON Schema parameter validation.
+1. All SRE capabilities (`query_telemetry`, `diagnose_k8s_pods`, `fetch_container_logs`, `execute_remediation_runbook`, `generate_postmortem_rca`) are authored as pure MCP tool endpoints with strict JSON Schema parameter validation.
 2. The MCP Server operates over standard transport mechanisms (stdio and Server-Sent Events / HTTP), allowing direct integration with both our autonomous internal agent orchestrator and external developer tools (Claude Desktop, Antigravity IDE, Cursor).
 3. The server core has zero dependency on LLM tokens; tool execution is strictly deterministic and observable.
 

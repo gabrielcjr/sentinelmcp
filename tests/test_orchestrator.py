@@ -22,7 +22,7 @@ async def test_deterministic_engine_full_investigation():
 
     step_actions = [s.action_name for s in result.steps]
     assert step_actions == [
-        "query_signoz_telemetry",
+        "query_telemetry",
         "diagnose_k8s_pods",
         "fetch_container_logs",
         "execute_remediation_runbook",

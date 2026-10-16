@@ -3,13 +3,13 @@
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg?logo=python&logoColor=white)](https://python.org)
 [![MCP](https://img.shields.io/badge/Model_Context_Protocol-2.x-black.svg?logo=anthropic&logoColor=white)](https://modelcontextprotocol.io)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-K3s_Native-326CE5.svg?logo=kubernetes&logoColor=white)](https://kubernetes.io)
-[![SigNoz](https://img.shields.io/badge/SigNoz-OpenTelemetry_APM-F5A800.svg?logo=opentelemetry&logoColor=white)](https://signoz.io)
+[![Jaeger](https://img.shields.io/badge/Jaeger-OpenTelemetry_Tracing-002f6c.svg?logo=opentelemetry&logoColor=white)](https://www.jaegertracing.io)
 [![LLM](https://img.shields.io/badge/LLM_Tier-Google_Gemini_Flash_%7C_Groq-4285F4.svg?logo=google&logoColor=white)](https://ai.google.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 **SentinelMCP** is an autonomous Site Reliability Engineering (SRE) agent designed to detect, investigate, and remediate microservice incidents on Kubernetes clusters. 
 
-Powered by Anthropic's **Model Context Protocol (MCP)** and built for **Zero-Cost Operation** using free-tier LLM providers (**Google Gemini 2.0 / 1.5 Flash** and **Groq**) with a deterministic offline heuristic fallback, SentinelMCP bridges observability platforms (**SigNoz / ClickHouse**) and orchestration platforms (**Kubernetes / K3s**) into an autonomous closed-loop self-healing ecosystem.
+Powered by Anthropic's **Model Context Protocol (MCP)** and built for **Zero-Cost Operation** using free-tier LLM providers (**Google Gemini 2.0 / 1.5 Flash** and **Groq**) with a deterministic offline heuristic fallback, SentinelMCP bridges observability platforms (**Jaeger / OpenTelemetry**) and orchestration platforms (**Kubernetes / K3s**) into an autonomous closed-loop self-healing ecosystem.
 
 ---
 
@@ -17,7 +17,7 @@ Powered by Anthropic's **Model Context Protocol (MCP)** and built for **Zero-Cos
 
 ```
                       [ Incoming Alert / Chaos Event ]
-                     (SigNoz Alertmanager / Webhook)
+                     (Jaeger Alertmanager / Webhook)
                                      │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -34,7 +34,7 @@ Powered by Anthropic's **Model Context Protocol (MCP)** and built for **Zero-Cos
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
 │  │            Model Context Protocol (MCP) SRE Tool Server               │  │
 │  │                                                                       │  │
-│  │   [query_signoz_telemetry]      [diagnose_k8s_pods]                   │  │
+│  │   [query_telemetry]             [diagnose_k8s_pods]                   │  │
 │  │   P50/P95/P99 latency & traces  Exit codes (137 OOMKilled), Pod phase │  │
 │  │                                                                       │  │
 │  │   [fetch_container_logs]        [execute_remediation_runbook]         │  │
@@ -56,7 +56,7 @@ Powered by Anthropic's **Model Context Protocol (MCP)** and built for **Zero-Cos
                         │                                  │
       Cluster Mutations ▼                                  ▼ Telemetry & Traces
 ┌───────────────────────────────┐                  ┌──────────────────────────┐
-│  Kubernetes (K3s) Cluster     │                  │  SigNoz APM / ClickHouse │
+│  Kubernetes (K3s) Cluster     │                  │  Jaeger Tracing APM      │
 │  • EdgeShield (API Gateway)   │                  │  • Distributed Traces    │
 │  • DevATS (Job Ingestion)     │                  │  • Error Rate Spikes     │
 │  • AMAE (Financial Ledger)    │                  │  • Container Metrics     │
@@ -71,7 +71,7 @@ Powered by Anthropic's **Model Context Protocol (MCP)** and built for **Zero-Cos
 2. **$0 Operating Cost (Free-Tier Architecture):** Integrates directly with Google Gemini 2.0 / 1.5 Flash (15 RPM free tier) and Groq. Zero paid tokens required.
 3. **Deterministic Heuristic Runbook Fallback:** Features an offline rule-based state machine that ensures 100% of unit tests, CI/CD pipelines, and local dev environments execute predictably with zero network latency or API keys.
 4. **Non-Bypassable Safety Guardrails:** Prevents cluster destabilization with automatic dry-run verification, target cooldown windows, bounded replica ceilings, and restart rate limits.
-5. **Trace-to-Log Correlation & Automated Post-Mortem:** Cross-correlates SigNoz distributed trace IDs with Kubernetes container exit codes (e.g. exit code 137 OOMKilled) and outputs formatted Markdown Root Cause Analysis (RCA) documents.
+5. **Trace-to-Log Correlation & Automated Post-Mortem:** Cross-correlates Jaeger distributed trace IDs with Kubernetes container exit codes (e.g. exit code 137 OOMKilled) and outputs formatted Markdown Root Cause Analysis (RCA) documents.
 
 ---
 
@@ -79,7 +79,7 @@ Powered by Anthropic's **Model Context Protocol (MCP)** and built for **Zero-Cos
 
 | Tool Name | Parameters | Description |
 | :--- | :--- | :--- |
-| `query_signoz_telemetry` | `service_name`, `time_window_mins`, `min_status_code` | Queries SigNoz for latency percentiles (P50/P95/P99), error rates, and active error trace IDs. |
+| `query_telemetry` | `service_name`, `time_window_mins`, `min_status_code` | Queries Jaeger for latency percentiles (P50/P95/P99), error rates, and active error trace IDs. |
 | `diagnose_k8s_pods` | `namespace`, `service_name`, `selector` | Inspects pod lifecycle states, restart counts, and container termination exit codes. |
 | `fetch_container_logs` | `namespace`, `pod_name`, `tail_lines`, `previous` | Retrieves stdout/stderr logs from active or crashed previous container instances. |
 | `execute_remediation_runbook` | `incident_id`, `action_type`, `target`, `params`, `dry_run` | Applies guarded remediation (restart, scale, flush_cache, enable_fallback) with diff previews. |

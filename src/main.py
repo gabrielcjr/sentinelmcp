@@ -29,7 +29,7 @@ orchestrator = SREAgentOrchestrator()
 
 
 class AlertWebhookPayload(BaseModel):
-    """SigNoz / Prometheus Alertmanager inbound webhook schema."""
+    """Jaeger / Prometheus Alertmanager inbound webhook schema."""
     service_name: str = Field(..., description="Target service (e.g. 'edgeshield')")
     alert_name: str = Field(default="HighErrorRateAlert")
     severity: str = Field(default="SEV-2")
@@ -61,7 +61,7 @@ async def health_check():
 
 @app.post("/api/v1/incidents/webhook", response_model=IncidentTriggerResponse)
 async def receive_alert_webhook(payload: AlertWebhookPayload):
-    """Receives inbound alert webhooks from SigNoz, Prometheus, or manual triggers."""
+    """Receives inbound alert webhooks from Jaeger, Prometheus, or manual triggers."""
     incident_id = f"INC-{uuid.uuid4().hex[:8].upper()}"
 
     res = await orchestrator.investigate_incident(

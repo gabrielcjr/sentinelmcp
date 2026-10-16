@@ -46,11 +46,11 @@ class DeterministicRunbookEngine:
         step_num = 1
 
         # -------------------------------------------------------------
-        # Step 1: Query SigNoz Telemetry
+        # Step 1: Query Jaeger Telemetry
         # -------------------------------------------------------------
-        thought_1 = f"Querying SigNoz APM telemetry for '{service_name}' to establish error rate and latency baseline."
+        thought_1 = f"Querying Jaeger APM telemetry for '{service_name}' to establish error rate and latency baseline."
         telemetry_res = await self.mcp_server.call_tool(
-            "query_signoz_telemetry",
+            "query_telemetry",
             {"service_name": service_name, "time_window_mins": 15},
         )
         telemetry_raw = telemetry_res.structured_content or {}
@@ -58,7 +58,7 @@ class DeterministicRunbookEngine:
         steps.append(
             InvestigationStep(
                 step_number=step_num,
-                action_name="query_signoz_telemetry",
+                action_name="query_telemetry",
                 thought=thought_1,
                 result=telemetry_data,
             )
@@ -168,7 +168,7 @@ class DeterministicRunbookEngine:
         # -------------------------------------------------------------
         thought_5 = "Synthesizing evidence into an executive Markdown Root Cause Analysis (RCA) report."
         actions_taken = [
-            f"Evaluated SigNoz APM telemetry (Error rate: {telemetry_data.get('error_rate_pct', '5.89')}%)",
+            f"Evaluated Jaeger APM telemetry (Error rate: {telemetry_data.get('error_rate_pct', '5.89')}%)",
             f"Diagnosed K8s pods: Identified {has_oom and 'OOMKilled (code 137)' or 'Unhealthy status'}",
             f"Dispatched guarded runbook: {action_type.upper()} on deployment/{service_name} (dry_run={dry_run})",
         ]

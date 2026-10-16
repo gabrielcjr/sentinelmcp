@@ -43,7 +43,7 @@ async def generate_postmortem_rca(
     """
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     tl = timeline or [
-        {"time": "-15m", "description": "SigNoz APM detected HTTP 5xx error rate spike (> 5%)."},
+        {"time": "-15m", "description": "Jaeger APM detected HTTP 5xx error rate spike (> 5%)."},
         {"time": "-12m", "description": "Kubernetes pod diagnostic identified OOMKilled exit code 137."},
         {"time": "-8m", "description": "SentinelMCP evaluated blast radius and dispatched guarded remediation."},
         {"time": "-3m", "description": "Workload recovered, error rate normalized below 0.1%."},
@@ -55,7 +55,7 @@ async def generate_postmortem_rca(
     recs = preventative_recommendations or [
         "Increase container memory limit from 256Mi to 512Mi in Helm values / K8s manifest.",
         "Tune EdgeShield Redis sliding-window pipeline batch size to throttle sudden burst allocations.",
-        "Implement predictive autoscaling (HPA) based on SigNoz request volume metrics.",
+        "Implement predictive autoscaling (HPA) based on Jaeger / OpenTelemetry request volume metrics.",
     ]
 
     # Format Markdown

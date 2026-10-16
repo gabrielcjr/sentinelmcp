@@ -10,7 +10,7 @@ data:
   LLM_MODEL: "gemini-2.0-flash"
   K8S_IN_CLUSTER: "true"
   K8S_NAMESPACE: "default"
-  SIGNOZ_API_URL: "http://signoz-otel-collector.signoz:8080"
+  TELEMETRY_API_URL: "http://jaeger.jaeger.svc.cluster.local:16686"
   SENTINEL_DRY_RUN: "true"
   MAX_RESTARTS_PER_HOUR: "3"
   MAX_REPLICAS_LIMIT: "10"

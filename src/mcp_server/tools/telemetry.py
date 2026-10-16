@@ -1,4 +1,4 @@
-"""SigNoz APM telemetry query tool."""
+"""Jaeger & OpenTelemetry APM telemetry query tool."""
 
 from typing import Any, Dict, List, Optional
 import httpx
@@ -7,7 +7,7 @@ from src.config import settings
 
 
 class TelemetrySummary(BaseModel):
-    """Structured summary of queried SigNoz telemetry."""
+    """Structured summary of queried Jaeger / OpenTelemetry telemetry."""
 
     service_name: str
     time_window_mins: int
@@ -19,40 +19,40 @@ class TelemetrySummary(BaseModel):
     p99_latency_ms: float
     top_failing_endpoints: List[Dict[str, Any]] = Field(default_factory=list)
     recent_error_traces: List[Dict[str, Any]] = Field(default_factory=list)
-    data_source: str = "signoz_live"
+    data_source: str = "jaeger_live"
 
 
-async def query_signoz_telemetry(
+async def query_telemetry(
     service_name: str,
     time_window_mins: int = 15,
     min_status_code: int = 500,
     api_url: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Queries SigNoz APM for service latency, error spikes, and active error traces.
+    """Queries Jaeger / OpenTelemetry APM for service latency, error spikes, and active error traces.
 
     Args:
         service_name: Name of target service (e.g., 'edgeshield', 'devats', 'amae')
         time_window_mins: Lookback window in minutes (default: 15)
         min_status_code: Minimum HTTP status code to consider as error (default: 500)
-        api_url: Optional override for SigNoz API URL
+        api_url: Optional override for Telemetry API URL
 
     Returns:
         Structured dictionary containing latency percentiles, error rates, and traces.
     """
-    base_url = api_url or settings.signoz_api_url
+    base_url = api_url or settings.telemetry_api_url
 
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             headers = {}
-            if settings.signoz_api_key:
-                headers["SIGNOZ-API-KEY"] = settings.signoz_api_key
+            if settings.telemetry_api_key:
+                headers["Authorization"] = f"Bearer {settings.telemetry_api_key}"
 
             response = await client.get(
-                f"{base_url}/api/v1/traces/metrics",
+                f"{base_url}/api/traces",
                 params={
                     "service": service_name,
-                    "window": f"{time_window_mins}m",
-                    "status_code": min_status_code,
+                    "lookback": f"{time_window_mins}m",
+                    "limit": 20,
                 },
                 headers=headers,
             )
@@ -88,7 +88,7 @@ async def query_signoz_telemetry(
                     "error_message": "Upstream timeout: connection refused on Redis rate-limiter socket",
                 }
             ],
-            data_source="simulated_signoz_buffer",
+            data_source="simulated_jaeger_buffer",
         ).model_dump()
 
     return TelemetrySummary(
@@ -104,5 +104,5 @@ async def query_signoz_telemetry(
             {"endpoint": "/healthz", "count": 120, "code": 503}
         ],
         recent_error_traces=[],
-        data_source="simulated_signoz_buffer",
+        data_source="simulated_jaeger_buffer",
     ).model_dump()

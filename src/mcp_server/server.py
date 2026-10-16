@@ -3,7 +3,7 @@
 from typing import Any, Dict, List, Optional
 from mcp.server.mcpserver import MCPServer
 from src.config import settings
-from src.mcp_server.tools.telemetry import query_signoz_telemetry
+from src.mcp_server.tools.telemetry import query_telemetry
 from src.mcp_server.tools.k8s_diag import diagnose_k8s_pods, fetch_container_logs
 from src.mcp_server.tools.remediation import execute_remediation_runbook
 from src.mcp_server.tools.postmortem import generate_postmortem_rca
@@ -18,16 +18,16 @@ def create_mcp_server() -> MCPServer:
 
     # 1. Telemetry Query Tool
     @server.tool(
-        name="query_signoz_telemetry",
-        description="Query SigNoz APM for P50/P95/P99 latency, HTTP error rate spikes, and active error traces.",
+        name="query_telemetry",
+        description="Query Jaeger / OpenTelemetry APM for P50/P95/P99 latency, HTTP error rate spikes, and active error traces.",
     )
-    async def tool_query_signoz_telemetry(
+    async def tool_query_telemetry(
         service_name: str,
         time_window_mins: int = 15,
         min_status_code: int = 500,
     ) -> Dict[str, Any]:
-        """Query SigNoz APM telemetry for latency percentiles and error rates."""
-        return await query_signoz_telemetry(
+        """Query Jaeger / OpenTelemetry APM telemetry for latency percentiles and error rates."""
+        return await query_telemetry(
             service_name=service_name,
             time_window_mins=time_window_mins,
             min_status_code=min_status_code,

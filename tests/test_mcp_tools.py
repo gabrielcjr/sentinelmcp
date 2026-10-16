@@ -2,15 +2,15 @@
 
 import pytest
 from src.mcp_server.server import create_mcp_server
-from src.mcp_server.tools.telemetry import query_signoz_telemetry
+from src.mcp_server.tools.telemetry import query_telemetry
 from src.mcp_server.tools.k8s_diag import diagnose_k8s_pods, fetch_container_logs
 from src.mcp_server.tools.remediation import execute_remediation_runbook
 from src.mcp_server.tools.postmortem import generate_postmortem_rca
 
 
 @pytest.mark.asyncio
-async def test_tool_query_signoz_telemetry():
-    result = await query_signoz_telemetry("edgeshield", time_window_mins=15)
+async def test_tool_query_telemetry():
+    result = await query_telemetry("edgeshield", time_window_mins=15)
     assert result["service_name"] == "edgeshield"
     assert "error_rate_pct" in result
     assert "p99_latency_ms" in result
@@ -66,7 +66,7 @@ async def test_tool_generate_postmortem_rca():
 async def test_mcp_server_direct_call():
     server = create_mcp_server()
     res = await server.call_tool(
-        "query_signoz_telemetry",
+        "query_telemetry",
         {"service_name": "edgeshield", "time_window_mins": 10},
     )
     assert res.is_error is False

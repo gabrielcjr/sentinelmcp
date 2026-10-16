@@ -28,9 +28,9 @@ class Settings(BaseSettings):
     k8s_namespace: str = Field(default="default", description="Target Kubernetes namespace")
     k8s_context: str = Field(default="", description="Kubeconfig context name if running externally")
 
-    # SigNoz APM & Observability
-    signoz_api_url: str = Field(default="http://localhost:8080", description="SigNoz / ClickHouse APM endpoint")
-    signoz_api_key: str = Field(default="", description="SigNoz API token if authentication is enabled")
+    # Jaeger APM & Observability
+    telemetry_api_url: str = Field(default="http://localhost:16686", description="Jaeger / OpenTelemetry APM endpoint")
+    telemetry_api_key: str = Field(default="", description="Telemetry API token if authentication is enabled")
 
     # Safety Guardrails
     sentinel_dry_run: bool = Field(default=True, description="Enforce dry-run mode for remediations")

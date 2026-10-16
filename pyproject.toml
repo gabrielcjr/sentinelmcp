@@ -18,7 +18,7 @@ keywords = [
     "sre",
     "self-healing",
     "agentic-ai",
-    "signoz",
+    "jaeger",
     "kubernetes",
     "opentelemetry"
 ]
