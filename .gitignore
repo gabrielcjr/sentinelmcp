@@ -23,6 +23,8 @@ wheels/
 *.egg
 .env
 .env.local
+k8s/secret.yaml
+*.key
 .pytest_cache/
 .coverage
 htmlcov/
