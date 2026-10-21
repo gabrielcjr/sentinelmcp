@@ -89,11 +89,16 @@ class DeterministicRunbookEngine:
         # Step 3: Container Log Inspection (if pods show restarts/errors)
         # -------------------------------------------------------------
         has_oom = False
+        is_scaled_down = False
         target_pod = None
+        target_ns = None
         pods_list = diag_data if isinstance(diag_data, list) else diag_data.get("result", [])
         for pod in pods_list:
             if isinstance(pod, dict) and pod.get("is_failing"):
                 target_pod = pod.get("pod_name")
+                target_ns = pod.get("namespace")
+                if "0 replicas" in (pod.get("failure_reason") or "") or pod.get("phase") == "ScaledDown":
+                    is_scaled_down = True
                 for c in pod.get("containers", []):
                     if c.get("exit_code") == 137 or "OOM" in (c.get("reason") or ""):
                         has_oom = True
@@ -101,7 +106,7 @@ class DeterministicRunbookEngine:
         thought_3 = f"Fetching container stdout/stderr logs from '{target_pod or service_name}' to isolate failure trace."
         logs_res = await self.mcp_server.call_tool(
             "fetch_container_logs",
-            {"pod_name": target_pod, "tail_lines": 30, "previous": True},
+            {"pod_name": target_pod, "namespace": target_ns, "tail_lines": 30, "previous": True},
         )
         logs_raw = logs_res.structured_content or {}
         logs_data = logs_raw.get("result", logs_raw) if isinstance(logs_raw, dict) else logs_raw
@@ -118,9 +123,23 @@ class DeterministicRunbookEngine:
         # -------------------------------------------------------------
         # Step 4: Dispatch Guarded Remediation
         # -------------------------------------------------------------
-        if has_oom:
+        if is_scaled_down:
+            action_type = "scale"
+            params = {"replicas": 1}
+            if target_ns:
+                params["namespace"] = target_ns
+            thought_4 = (
+                f"Workload '{service_name}' has 0 available replicas. "
+                f"Executing scale runbook to restore deployment to 1 replica."
+            )
+            root_cause = (
+                f"Service '{service_name}' was completely offline due to 0 ready replicas."
+            )
+        elif has_oom:
             action_type = "scale"
             params = {"replicas": 3}
+            if target_ns:
+                params["namespace"] = target_ns
             thought_4 = (
                 f"Diagnostics confirm memory exhaustion (OOMKilled exit code 137). "
                 f"Recommending horizontal scale to 3 replicas to distribute traffic surge."
@@ -132,6 +151,8 @@ class DeterministicRunbookEngine:
         else:
             action_type = "restart"
             params = {}
+            if target_ns:
+                params["namespace"] = target_ns
             thought_4 = (
                 f"Pod unhealthy or connection deadlock detected. "
                 f"Executing safe rolling restart of deployment/{service_name}."

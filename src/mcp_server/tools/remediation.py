@@ -64,50 +64,75 @@ async def execute_remediation_runbook(
     diff = ""
     message = ""
 
+    # Auto-discover target deployment and its namespace
+    target_ns = action_params.get("namespace")
+    actual_target = target
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "kubectl", "get", "deployments", "-A", "-o", "json",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        out, _ = await asyncio.wait_for(proc.communicate(), timeout=3.0)
+        if proc.returncode == 0:
+            import json
+            items = json.loads(out.decode()).get("items", [])
+            for item in items:
+                d_name = item["metadata"]["name"]
+                d_ns = item["metadata"]["namespace"]
+                if d_name == target or target in d_name:
+                    if not target_ns:
+                        target_ns = d_ns
+                    actual_target = d_name
+                    break
+    except Exception:
+        pass
+    target_ns = target_ns or settings.k8s_namespace
+
     if action_type == "restart":
         diff = (
-            f"--- deployment/{target} (live)\n"
-            f"+++ deployment/{target} (restarted)\n"
+            f"--- deployment/{actual_target} (live)\n"
+            f"+++ deployment/{actual_target} (restarted)\n"
             f"@@ spec.template.metadata.annotations @@\n"
             f"+ kubectl.kubernetes.io/restartedAt: $(date -u +%Y-%m-%dT%H:%M:%SZ)\n"
         )
         if is_dry_run:
-            message = f"[DRY-RUN] Simulated rolling restart of deployment/{target}. No live mutation performed."
+            message = f"[DRY-RUN] Simulated rolling restart of deployment/{actual_target} in namespace {target_ns}. No live mutation performed."
         else:
             try:
                 proc = await asyncio.create_subprocess_exec(
-                    "kubectl", "rollout", "restart", f"deployment/{target}",
-                    "-n", settings.k8s_namespace,
+                    "kubectl", "rollout", "restart", f"deployment/{actual_target}",
+                    "-n", target_ns,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
                 await asyncio.wait_for(proc.communicate(), timeout=10.0)
-                message = f"Successfully initiated rolling restart of deployment/{target}."
+                message = f"Successfully initiated rolling restart of deployment/{actual_target} in namespace {target_ns}."
             except Exception as e:
                 message = f"Restart command dispatched (simulated/offline): {str(e)}"
 
     elif action_type == "scale":
         new_replicas = action_params.get("replicas", 2)
         diff = (
-            f"--- deployment/{target} (live)\n"
-            f"+++ deployment/{target} (scaled)\n"
+            f"--- deployment/{actual_target} (live)\n"
+            f"+++ deployment/{actual_target} (scaled)\n"
             f"@@ spec.replicas @@\n"
             f"- replicas: 1\n"
             f"+ replicas: {new_replicas}\n"
         )
         if is_dry_run:
-            message = f"[DRY-RUN] Simulated scaling deployment/{target} to {new_replicas} replicas."
+            message = f"[DRY-RUN] Simulated scaling deployment/{actual_target} in namespace {target_ns} to {new_replicas} replicas."
         else:
             try:
                 proc = await asyncio.create_subprocess_exec(
-                    "kubectl", "scale", f"deployment/{target}",
+                    "kubectl", "scale", f"deployment/{actual_target}",
                     f"--replicas={new_replicas}",
-                    "-n", settings.k8s_namespace,
+                    "-n", target_ns,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
                 await asyncio.wait_for(proc.communicate(), timeout=10.0)
-                message = f"Successfully scaled deployment/{target} to {new_replicas} replicas."
+                message = f"Successfully scaled deployment/{actual_target} in namespace {target_ns} to {new_replicas} replicas."
             except Exception as e:
                 message = f"Scale command dispatched (simulated/offline): {str(e)}"
 

@@ -46,27 +46,41 @@ async def diagnose_k8s_pods(
 
     # Try live kubectl query if available
     try:
-        cmd = ["kubectl", "get", "pods", "-n", ns, "-o", "json"]
+        import json
+        diagnostics = []
+
+        cmd = ["kubectl", "get", "pods", "-o", "json"]
+        if namespace:
+            cmd.extend(["-n", namespace])
+        else:
+            cmd.append("-A")
+
         if selector:
             cmd.extend(["-l", selector])
-        elif service_name:
-            cmd.extend(["-l", f"app={service_name}"])
 
         proc = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=3.0)
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=4.0)
 
         if proc.returncode == 0:
-            import json
             data = json.loads(stdout.decode())
             items = data.get("items", [])
-            diagnostics = []
 
             for item in items:
                 p_name = item["metadata"]["name"]
+                p_ns = item["metadata"].get("namespace", "default")
+                labels = item["metadata"].get("labels", {})
+
+                if service_name:
+                    app_lbl = labels.get("app", "")
+                    if (service_name not in app_lbl and
+                        service_name not in p_name and
+                        service_name != p_ns):
+                        continue
+
                 phase = item.get("status", {}).get("phase", "Unknown")
                 c_statuses = item.get("status", {}).get("containerStatuses", [])
 
@@ -107,7 +121,7 @@ async def diagnose_k8s_pods(
                 diagnostics.append(
                     PodDiagnosticInfo(
                         pod_name=p_name,
-                        namespace=ns,
+                        namespace=p_ns,
                         phase=phase,
                         containers=containers,
                         is_failing=is_failing,
@@ -115,8 +129,46 @@ async def diagnose_k8s_pods(
                     ).model_dump()
                 )
 
-            if diagnostics:
-                return diagnostics
+        # If no pods found, check if deployment has 0 replicas (scaled down)
+        if not diagnostics and service_name:
+            dep_cmd = ["kubectl", "get", "deployments", "-A", "-o", "json"]
+            proc_dep = await asyncio.create_subprocess_exec(
+                *dep_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout_dep, _ = await asyncio.wait_for(proc_dep.communicate(), timeout=4.0)
+            if proc_dep.returncode == 0:
+                dep_data = json.loads(stdout_dep.decode())
+                for dep in dep_data.get("items", []):
+                    d_name = dep["metadata"]["name"]
+                    d_ns = dep["metadata"]["namespace"]
+                    if service_name in d_name or service_name == d_ns:
+                        spec_replicas = dep.get("spec", {}).get("replicas", 1)
+                        ready_replicas = dep.get("status", {}).get("readyReplicas", 0)
+                        if spec_replicas == 0 or ready_replicas == 0:
+                            diagnostics.append(
+                                PodDiagnosticInfo(
+                                    pod_name=f"{d_name}-scaled-down",
+                                    namespace=d_ns,
+                                    phase="ScaledDown",
+                                    containers=[
+                                        ContainerStatusInfo(
+                                            name=d_name,
+                                            ready=False,
+                                            restart_count=0,
+                                            state="scaled_to_zero",
+                                            reason="0 replicas",
+                                        )
+                                    ],
+                                    recent_events=[f"Deployment {d_name} has 0 available replicas"],
+                                    is_failing=True,
+                                    failure_reason="Workload has 0 available replicas (scaled down)",
+                                ).model_dump()
+                            )
+
+        if diagnostics:
+            return diagnostics
     except Exception:
         # Fallback to simulated diagnostic when offline or testing
         pass

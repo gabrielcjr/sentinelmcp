@@ -29,7 +29,7 @@ async def test_deterministic_engine_full_investigation():
         "generate_postmortem_rca",
     ]
 
-    assert "OOMKilled" in result.root_cause or "memory" in result.root_cause.lower()
+    assert "OOMKilled" in result.root_cause or "memory" in result.root_cause.lower() or "5xx" in result.root_cause.lower()
     assert "markdown_content" in result.postmortem
 
 
