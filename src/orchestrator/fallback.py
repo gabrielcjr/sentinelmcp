@@ -123,6 +123,8 @@ class DeterministicRunbookEngine:
         # -------------------------------------------------------------
         # Step 4: Dispatch Guarded Remediation
         # -------------------------------------------------------------
+        alert_lower = alert_name.lower()
+        details = extra_details or {}
         if is_scaled_down:
             action_type = "scale"
             params = {"replicas": 1}
@@ -135,18 +137,19 @@ class DeterministicRunbookEngine:
             root_cause = (
                 f"Service '{service_name}' was completely offline due to 0 ready replicas."
             )
-        elif has_oom:
+        elif has_oom or "oom" in alert_lower or "burst" in alert_lower or "surge" in alert_lower or details.get("action") == "scale":
+            target_replicas = int(details.get("replicas", 2))
             action_type = "scale"
-            params = {"replicas": 3}
+            params = {"replicas": target_replicas}
             if target_ns:
                 params["namespace"] = target_ns
             thought_4 = (
-                f"Diagnostics confirm memory exhaustion (OOMKilled exit code 137). "
-                f"Recommending horizontal scale to 3 replicas to distribute traffic surge."
+                f"Diagnostics confirm traffic surge/capacity bottleneck on '{service_name}'. "
+                f"Executing horizontal auto-scale to {target_replicas} replicas to absorb ingress surge."
             )
             root_cause = (
-                f"Service '{service_name}' encountered memory exhaustion (OOMKilled, exit code 137) "
-                f"triggered by sudden traffic burst on reverse proxy streaming pipelines."
+                f"Service '{service_name}' encountered severe resource saturation under traffic burst. "
+                f"Horizontal scaling applied to distribute load across {target_replicas} pods."
             )
         else:
             action_type = "restart"
