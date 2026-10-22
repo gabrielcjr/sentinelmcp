@@ -18,10 +18,10 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", description="Logging level")
 
     # LLM Settings (Free Tier / Fallback)
-    llm_provider: str = Field(default="gemini", description="LLM provider: gemini, groq, or fallback")
+    llm_provider: str = Field(default="groq", description="LLM provider: groq, gemini, or fallback")
     gemini_api_key: str = Field(default="", description="Google Gemini API Key (free tier)")
     groq_api_key: str = Field(default="", description="Groq API Key (free tier)")
-    llm_model: str = Field(default="gemini-2.0-flash", description="Model name")
+    llm_model: str = Field(default="qwen/qwen3.8-27b", description="Model name (e.g. qwen/qwen3.8-27b for Groq, gemini-2.5-flash-lite for Gemini)")
 
     # Kubernetes Cluster
     k8s_in_cluster: bool = Field(default=False, description="Whether running inside K3s/K8s pod")

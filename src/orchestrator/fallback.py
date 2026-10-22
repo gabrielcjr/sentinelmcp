@@ -40,10 +40,26 @@ class DeterministicRunbookEngine:
         alert_name: str = "HighErrorRateAlert",
         dry_run: bool = True,
         extra_details: Optional[Dict[str, Any]] = None,
+        engine: str = "deterministic_heuristic_engine",
+        llm_reasoning: Optional[str] = None,
     ) -> IncidentInvestigationResult:
-        """Executes a deterministic diagnostic and remediation sequence via MCP tools."""
+        """Executes a diagnostic and remediation sequence via MCP tools."""
         steps: List[InvestigationStep] = []
         step_num = 1
+
+        # -------------------------------------------------------------
+        # Optional Step: LLM Reasoning Synthesis
+        # -------------------------------------------------------------
+        if llm_reasoning:
+            steps.append(
+                InvestigationStep(
+                    step_number=step_num,
+                    action_name="llm_hypothesis_formulation",
+                    thought=f"Synthesized incident telemetry and alert context using {engine}.",
+                    result={"hypothesis_plan": llm_reasoning[:400] + ("..." if len(llm_reasoning) > 400 else "")},
+                )
+            )
+            step_num += 1
 
         # -------------------------------------------------------------
         # Step 1: Query Jaeger Telemetry
@@ -221,7 +237,7 @@ class DeterministicRunbookEngine:
             incident_id=incident_id,
             service_name=service_name,
             alert_name=alert_name,
-            engine="deterministic_heuristic_engine",
+            engine=engine,
             status="MITIGATED" if dry_run else "RESOLVED",
             steps=steps,
             root_cause=root_cause,
